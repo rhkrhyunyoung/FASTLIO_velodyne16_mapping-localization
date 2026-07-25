@@ -7,8 +7,18 @@ This repository provides a robust, **ROS2-native solution** for LiDAR-based SLAM
 
 ---
 
-##  Key Enhancements
+## My Contributions
 
+- Ported FAST-LIO localization components from ROS1 to ROS2 Humble
+- Removed Livox SDK dependency and adapted the pipeline for Velodyne VLP-16
+- Designed TF architecture for Nav2 compatibility
+- Implemented dynamic map->odom transformation calculation
+- Integrated FAST-LIO localization output with Nav2 navigation stack
+- Tuned localization and costmap parameters for autonomous navigation
+
+
+
+##  Key Enhancements
 ### 1. Velodyne-Native Integration
 *   **Dependency-Free Build**: Eliminated the mandatory Livox SDK dependency. This version builds flawlessly in environments using only Velodyne drivers.
 *   **Universal Compatibility**: Optimized for standard `sensor_msgs/msg/PointCloud2` inputs, ensuring compatibility with VLP-16 and other Velodyne models.
@@ -25,9 +35,13 @@ This repository provides a robust, **ROS2-native solution** for LiDAR-based SLAM
 
 ---
 
-##  System Architecture & TF Hierarchy
+## TF Transformation Logic
 
-This project uses an **AMCL-style inverse calculation** to maintain a seamless TF tree. To prevent "Multiple Parents" conflicts, the node calculates the `map -> odom` transform dynamically.
+To maintain Nav2-compatible TF hierarchy, the system dynamically computes:
+
+T_map->odom = T_map->base_link × (T_odom->base_link)^-1
+
+This allows FAST-LIO localization and local odometry to coexist without TF conflicts.
 
 ### TF Tree Structure
 - **`map`**: Global reference frame (provided by FAST-LIO Localization).
