@@ -34,28 +34,39 @@ This repository provides a robust, **ROS2-native solution** for LiDAR-based SLAM
 *   **Costmap Optimization**: Pre-configured `nav2_params.yaml` to utilize LiDAR data for obstacle avoidance while filtering ground noise.
 
 ---
-
 ## TF Transformation Logic
 
-To maintain Nav2-compatible TF hierarchy, the system dynamically computes:
+To maintain a **Nav2-compatible TF hierarchy**, the system dynamically computes the transform between the global map and the local odometry frame. This prevents TF conflicts between FAST-LIO's global localization and the robot's local odometry.
 
-T_map->odom = T_map->base_link × (T_odom->base_link)^-1
-
-This allows FAST-LIO localization and local odometry to coexist without TF conflicts.
-
+This integration allows **FAST-LIO** global localization and **Local Odometry** (Wheel/IMU) to coexist seamlessly within the standard ROS 2 navigation stack.
 ### TF Tree Structure
-- **`map`**: Global reference frame (provided by FAST-LIO Localization).
-- **`odom`**: Local odometry frame (continuous motion from wheel encoders/IMU).
-- **`base_link`**: Robot physical center.
-- **`sensors`**: Static transforms (LiDAR, IMU, etc.) attached to `base_link`.
 
-<img width="500" height="300" alt="스크린샷 2026-07-14 17-08-03" src="https://github.com/user-attachments/assets/14d908e1-e0c4-4b9f-8ad7-f186978a264f" />
+```mermaid
+graph TD
+    %% Frames Definition
+    Map["map (Global Frame)"]
+    Odom["odom (Odometry Frame)"]
+    BaseLink["base_link (Physical Center)"]
+    LiDAR["lidar_link (OS1-Sensor)"]
+    IMU["imu_link"]
 
+    %% Frame Connections
+    Map -->|FAST-LIO Localization| Odom
+    Odom -->|Wheel-IMU Odometry| BaseLink
+    BaseLink -->|Static Transform| LiDAR
+    BaseLink -->|Static Transform| IMU
 
+    %% Styling
+    style Map fill:#f5f5f5,stroke:#333,stroke-width:2px
+    style Odom fill:#f5f5f5,stroke:#333,stroke-width:2px
+    style BaseLink fill:#fff,stroke:#333,stroke-width:3px
+    style LiDAR fill:#eee,stroke:#333,stroke-dasharray: 5 5
+    style IMU fill:#eee,stroke:#333,stroke-dasharray: 5 5
+```
 ### Transformation Logic (Inverse Calculation)
 The node calculates the **map → odom** transform using the following logic to bridge the gap between high-frequency local odometry and high-precision global localization:
 
-$$T_{map \to odom} = T_{map \to base\_link} \times (T_{odom \to base\_link})^{-1}$$
+**$$T_{map \to odom} = T_{map \to base\_link} \times (T_{odom \to base\_link})^{-1}$$**
 
 > **Benefit**: This ensures a single parent for `base_link`, allowing Nav2's local planners to use smooth odometry while global planners use accurate map-based localization.
 
@@ -76,7 +87,9 @@ your_ros2_workspace/
 ### 1. Mapping (SLAM)
 Generate a point cloud map of your environment.
 
-``` ros2 launch fast_lio mapping.launch.py config_file:=velodyne.yaml```
+``` 
+ros2 launch fast_lio mapping.launch.py config_file:=velodyne.yaml
+```
 
 https://github.com/user-attachments/assets/37fe88da-bcde-46a3-9a15-cc479d6cf232
 
@@ -84,13 +97,16 @@ https://github.com/user-attachments/assets/37fe88da-bcde-46a3-9a15-cc479d6cf232
    
 ### 2. Save Map
 After mapping, save the result to a .pcd file.
-``` ros2 service call /map_save std_srvs/srv/Trigger {}```
+``` 
+ros2 service call /map_save std_srvs/srv/Trigger {}
+```
    <img width="300" height="200" alt="image" src="https://github.com/user-attachments/assets/d7cbc202-58b7-4ccb-a1d3-daa8f775e8a8" /><img width="300" height="200" alt="image" src="https://github.com/user-attachments/assets/4ad02e13-0f27-49f2-a5c3-edb079f2979b" />
 
 ### 3. Localization
 Run the system using a pre-built map for autonomous navigation.
 
-``` ros2 launch fast_lio localization.launch.py map:=/path/to/your/map_result/my_fast_lio_map.pcd use_sim_time:=true
+```
+ros2 launch fast_lio localization.launch.py map:=/path/to/your/map_result/my_fast_lio_map.pcd use_sim_time:=true
 ```
 
 https://github.com/user-attachments/assets/b1537e11-0d6c-43e7-bd98-64d6127a4e74
